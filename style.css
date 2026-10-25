@@ -31,6 +31,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .scroll-progress { position: fixed; z-index: 60; top: 0; left: 0; width: 100%; height: 3px; pointer-events: none; }
 .scroll-progress span { display: block; width: 0; height: 100%; background: var(--burgundy); }
 .announcement { min-height: 31px; padding: 5px 14px; color: #fff7eb; background: var(--burgundy); text-align: center; font-size: 10px; letter-spacing: .1em; }
+.seasonal-banner { padding: 6px 12px; color: var(--burgundy); background: #f4e9d8; text-align: center; font-family: var(--serif); font-size: 11px; }
+.seasonal-banner[hidden] { display: none; }
 .site-header { position: sticky; z-index: 50; top: 0; background: rgba(255,248,237,.95); border-bottom: 1px solid rgba(82,48,39,.09); backdrop-filter: blur(14px); }
 .header-inner { min-height: 79px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .brand { display: inline-flex; align-items: center; gap: 11px; flex-shrink: 0; }
@@ -277,6 +279,10 @@ h1 em, h2 em { color: var(--burgundy); font-weight: 400; }
   .product-card { grid-template-columns: .9fr 1.1fr; }
   .product-image-wrap, .product-image-wrap img { min-height: 330px; }
 }
+@media (max-width: 900px) {
+  .footer-main { flex-direction: column; gap: 32px; }
+  .footer-links { gap: clamp(28px, 8vw, 72px); }
+}
 @media (max-width: 760px) {
   :root { scroll-padding-top: 75px; }
   .wrap { width: calc(100% - 40px); }
@@ -400,3 +406,6 @@ h1 em, h2 em { color: var(--burgundy); font-weight: 400; }
 body[data-season="durga-puja"] .announcement { background: #4c192f; }
 body[data-season="diwali"] .announcement { background: #73451b; }
 body[data-season="bhai-dooj"] .announcement { background: #5a3442; }
+body[data-season="durga-puja"] .seasonal-banner { background: #f1e2d2; }
+body[data-season="diwali"] .seasonal-banner { background: #f4ead3; }
+body[data-season="bhai-dooj"] .seasonal-banner { background: #efe5dd; }

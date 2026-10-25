@@ -9,7 +9,7 @@ const SITE_CONFIG = {
   orderNoticeHours: 6,
   deliveryMethod: "Porter",
   deliveryArea: "Selected Mumbai locations",
-  announcement: "Homemade Bengali Sweets  •  Order 6 Hours Before Delivery  •  Mumbai Delivery via Porter",
+  announcement: "Homemade Bengali Sweets  •  Order {hours} Hours Before Delivery  •  Mumbai Delivery via {method}",
   heroTitleMain: "A little taste of Bengal,",
   heroTitleEmphasis: "made with a mother's love.",
   seasonalBanner: {
@@ -51,6 +51,9 @@ let lastOrderMessage = "";
 let toastTimeout;
 const rupees = value => `${SITE_CONFIG.currency}${value}`;
 const productById = id => SITE_CONFIG.products.find(product => product.id === id);
+const unitPriceFor = product => product.unitPrice ?? SITE_CONFIG.unitPrice;
+const cartPieces = () => [...cart.values()].reduce((sum, quantity) => sum + quantity, 0);
+const cartSubtotal = () => [...cart.entries()].reduce((sum, [id, quantity]) => sum + quantity * unitPriceFor(productById(id)), 0);
 
 function renderProducts() {
   const grid = document.querySelector("#product-grid");
@@ -61,8 +64,8 @@ function renderProducts() {
         <p class="product-kind">${product.category}</p>
         <h3>${product.name}</h3>
         <p class="product-description">${product.description}</p>
-        <div class="price-options" aria-label="Price options">${[1, 6, 12, 24].map(count => `<span class="price-option">${count} pc${count === 1 ? "" : "s"} <strong>${rupees(count * SITE_CONFIG.unitPrice)}</strong></span>`).join("")}</div>
-        <p class="unit-price">${rupees(SITE_CONFIG.unitPrice)} <span>per piece</span></p>
+        <div class="price-options" aria-label="Price options">${[1, 6, 12, 24].map(count => `<span class="price-option">${count} pc${count === 1 ? "" : "s"} <strong>${rupees(count * unitPriceFor(product))}</strong></span>`).join("")}</div>
+        <p class="unit-price">${rupees(unitPriceFor(product))} <span>per piece</span></p>
         <div class="quantity-control" aria-label="Choose ${product.shortName} quantity">
           <button type="button" data-quantity-step="-1" data-product="${product.id}" aria-label="Decrease ${product.shortName} quantity">−</button>
           <input type="number" inputmode="numeric" min="1" max="999" value="6" data-quantity="${product.id}" aria-label="${product.shortName} quantity in pieces">
@@ -83,8 +86,8 @@ function renderProducts() {
 
 function renderCart() {
   const entries = [...cart.entries()];
-  const pieces = entries.reduce((sum, [, quantity]) => sum + quantity, 0);
-  const subtotal = pieces * SITE_CONFIG.unitPrice;
+  const pieces = cartPieces();
+  const subtotal = cartSubtotal();
   const countText = `${pieces} ${pieces === 1 ? "piece" : "pieces"}`;
   document.querySelector("#cart-count").textContent = countText;
   document.querySelector("#cart-total").textContent = rupees(subtotal);
@@ -99,11 +102,11 @@ function renderCart() {
   container.innerHTML = entries.map(([id, quantity]) => {
     const product = productById(id);
     return `<div class="cart-row">
-      <div><span class="cart-product-name">${product.name}</span><span class="cart-product-unit">${rupees(SITE_CONFIG.unitPrice)} per piece</span></div>
+      <div><span class="cart-product-name">${product.name}</span><span class="cart-product-unit">${rupees(unitPriceFor(product))} per piece</span></div>
       <div class="cart-quantity" aria-label="${product.shortName} quantity">
         <button type="button" data-cart-step="-1" data-product="${id}" aria-label="Remove one ${product.shortName}">−</button><span>${quantity}</span><button type="button" data-cart-step="1" data-product="${id}" aria-label="Add one ${product.shortName}">+</button>
       </div>
-      <span class="cart-row-total">${rupees(quantity * SITE_CONFIG.unitPrice)}</span>
+      <span class="cart-row-total">${rupees(quantity * unitPriceFor(product))}</span>
       <button class="cart-remove" type="button" data-remove="${id}" aria-label="Remove ${product.shortName} from basket">Remove</button>
     </div>`;
   }).join("");
@@ -148,11 +151,11 @@ function getOrderMessage(formData) {
     "Order:",
     ...[...cart.entries()].flatMap(([id, quantity]) => {
       const product = productById(id);
-      return [`• ${product.shortName} — ${quantity} ${quantity === 1 ? "piece" : "pieces"} — ${rupees(quantity * SITE_CONFIG.unitPrice)}`, ""];
+      return [`• ${product.shortName} — ${quantity} ${quantity === 1 ? "piece" : "pieces"} — ${rupees(quantity * unitPriceFor(product))}`, ""];
     }),
-    `Total Pieces: ${[...cart.values()].reduce((sum, quantity) => sum + quantity, 0)}`,
+    `Total Pieces: ${cartPieces()}`,
     "",
-    `Item Subtotal: ${rupees([...cart.values()].reduce((sum, quantity) => sum + quantity, 0) * SITE_CONFIG.unitPrice)}`,
+    `Item Subtotal: ${rupees(cartSubtotal())}`,
     "",
     "Delivery Charges: Please confirm.",
     "",
@@ -181,7 +184,7 @@ function buildSchemas() {
     offers: {
       "@type": "Offer",
       priceCurrency: "INR",
-      price: SITE_CONFIG.unitPrice,
+      price: unitPriceFor(product),
       availability: "https://schema.org/InStock",
       url: "https://example.com/#sweets"
     }
@@ -206,8 +209,15 @@ function buildSchemas() {
 }
 
 function setupInteractions() {
-  document.querySelector("#announcement").textContent = SITE_CONFIG.seasonalBanner.enabled ? SITE_CONFIG.seasonalBanner.message : SITE_CONFIG.announcement;
-  if (SITE_CONFIG.seasonalBanner.enabled) document.body.dataset.season = SITE_CONFIG.seasonalBanner.theme;
+  document.querySelector("#announcement").textContent = SITE_CONFIG.announcement
+    .replace("{hours}", String(SITE_CONFIG.orderNoticeHours))
+    .replace("{method}", SITE_CONFIG.deliveryMethod);
+  if (SITE_CONFIG.seasonalBanner.enabled) {
+    document.body.dataset.season = SITE_CONFIG.seasonalBanner.theme;
+    const seasonalBanner = document.querySelector("#seasonal-banner");
+    seasonalBanner.textContent = SITE_CONFIG.seasonalBanner.message;
+    seasonalBanner.hidden = false;
+  }
   document.querySelector("#year").textContent = new Date().getFullYear();
   document.querySelector("#hero-title-main").textContent = SITE_CONFIG.heroTitleMain;
   document.querySelector("#hero-title-em").textContent = SITE_CONFIG.heroTitleEmphasis;
@@ -215,7 +225,14 @@ function setupInteractions() {
   document.querySelectorAll(".brand-name").forEach(element => { element.textContent = SITE_CONFIG.businessName; });
   document.querySelectorAll(".brand-tagline").forEach(element => { element.textContent = SITE_CONFIG.tagline; });
   document.querySelectorAll(".business-name").forEach(element => { element.textContent = SITE_CONFIG.businessName; });
+  document.querySelector("#splash-name").textContent = SITE_CONFIG.businessName;
   document.querySelectorAll(".whatsapp-display").forEach(element => { element.textContent = SITE_CONFIG.whatsappDisplay; });
+  document.querySelectorAll(".delivery-method").forEach(element => { element.textContent = SITE_CONFIG.deliveryMethod; });
+  document.querySelectorAll(".delivery-area").forEach(element => { element.textContent = SITE_CONFIG.deliveryArea; });
+  document.querySelectorAll(".order-notice").forEach(element => { element.textContent = `${SITE_CONFIG.orderNoticeHours} hours`; });
+  document.title = `${SITE_CONFIG.businessName} — ${SITE_CONFIG.tagline}`;
+  document.querySelector('meta[property="og:title"]').content = document.title;
+  document.querySelector('meta[name="twitter:title"]').content = document.title;
   document.querySelectorAll('a[href^="https://wa.me/"]').forEach(link => {
     link.href = `https://wa.me/${SITE_CONFIG.whatsappNumber}`;
   });
@@ -240,6 +257,10 @@ function setupInteractions() {
         input.addEventListener("input", () => input.setCustomValidity(""), { once: true });
         return;
       }
+      if ((cart.get(id) || 0) + quantity > 999) {
+        showToast("The maximum basket quantity for one sweet is 999 pieces.");
+        return;
+      }
       cart.set(id, (cart.get(id) || 0) + quantity);
       renderCart();
       showToast(`${quantity} ${quantity === 1 ? "piece" : "pieces"} of ${productById(id).shortName} added`);
@@ -251,6 +272,10 @@ function setupInteractions() {
       const id = step.dataset.product;
       const updated = (cart.get(id) || 0) + Number(step.dataset.cartStep);
       if (updated <= 0) cart.delete(id);
+      else if (updated > 999) {
+        showToast("The maximum basket quantity for one sweet is 999 pieces.");
+        return;
+      }
       else cart.set(id, updated);
       renderCart();
       return;
@@ -264,6 +289,9 @@ function setupInteractions() {
   });
 
   const form = document.querySelector("#order-form");
+  ["name", "address", "area"].forEach(name => {
+    form.elements[name].addEventListener("input", () => form.elements[name].setCustomValidity(""));
+  });
   updateDateTimeConstraints();
   form.elements.date.addEventListener("change", updateDateTimeConstraints);
   form.elements.time.addEventListener("focus", updateDateTimeConstraints);
@@ -279,6 +307,21 @@ function setupInteractions() {
     }
     updateDateTimeConstraints();
     if (!form.reportValidity()) return;
+    const emptyField = ["name", "address", "area"].find(name => !form.elements[name].value.trim());
+    if (emptyField) {
+      form.elements[emptyField].setCustomValidity("Please enter this information.");
+      form.reportValidity();
+      form.elements[emptyField].focus();
+      return;
+    }
+    const phoneDigits = form.elements.phone.value.replace(/\D/g, "").length;
+    if (phoneDigits < 8 || phoneDigits > 15) {
+      form.elements.phone.setCustomValidity("Enter a valid phone number with 8 to 15 digits.");
+      form.elements.phone.reportValidity();
+      form.elements.phone.focus();
+      form.elements.phone.addEventListener("input", () => form.elements.phone.setCustomValidity(""), { once: true });
+      return;
+    }
     const requested = new Date(`${form.elements.date.value}T${form.elements.time.value}`);
     if (Number.isNaN(requested.getTime()) || requested.getTime() < getEarliestDeliveryTime().getTime()) {
       message.textContent = `Please choose a delivery time at least ${SITE_CONFIG.orderNoticeHours} hours from now.`;
@@ -358,10 +401,10 @@ function setupInteractions() {
   }
 
   const splash = document.querySelector("#splash");
-  const hideSplash = () => setTimeout(() => splash.classList.add("is-hidden"), 1250);
-  if (document.readyState === "complete") hideSplash();
+  const hideSplash = () => splash.classList.add("is-hidden");
+  if (document.readyState === "complete") setTimeout(hideSplash, 1000);
   else window.addEventListener("load", hideSplash, { once: true });
-  setTimeout(hideSplash, 1800);
+  setTimeout(hideSplash, 1600);
 }
 
 renderProducts();
