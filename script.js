@@ -10,7 +10,8 @@ const SITE_CONFIG = {
   deliveryMethod: "Porter",
   deliveryArea: "Selected Mumbai locations",
   announcement: "Homemade Bengali Sweets  •  Order 6 Hours Before Delivery  •  Mumbai Delivery via Porter",
-  heroTitle: "A Little Taste of Bengal, Made with a Mother's Love.",
+  heroTitleMain: "A little taste of Bengal,",
+  heroTitleEmphasis: "made with a mother's love.",
   seasonalBanner: {
     enabled: false,
     theme: "durga-puja",
@@ -120,11 +121,15 @@ function localDateString(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function getEarliestDeliveryTime() {
+  return new Date(Date.now() + SITE_CONFIG.orderNoticeHours * 60 * 60 * 1000);
+}
+
 function updateDateTimeConstraints() {
   const form = document.querySelector("#order-form");
   const dateInput = form.elements.date;
   const timeInput = form.elements.time;
-  const earliest = new Date(Date.now() + SITE_CONFIG.orderNoticeHours * 60 * 60 * 1000);
+  const earliest = getEarliestDeliveryTime();
   const earliestDate = localDateString(earliest);
   dateInput.min = earliestDate;
   if (!dateInput.value || dateInput.value < earliestDate) dateInput.value = earliestDate;
@@ -204,7 +209,14 @@ function setupInteractions() {
   document.querySelector("#announcement").textContent = SITE_CONFIG.seasonalBanner.enabled ? SITE_CONFIG.seasonalBanner.message : SITE_CONFIG.announcement;
   if (SITE_CONFIG.seasonalBanner.enabled) document.body.dataset.season = SITE_CONFIG.seasonalBanner.theme;
   document.querySelector("#year").textContent = new Date().getFullYear();
-  document.querySelectorAll('a[href="https://wa.me/919967590265"]').forEach(link => {
+  document.querySelector("#hero-title-main").textContent = SITE_CONFIG.heroTitleMain;
+  document.querySelector("#hero-title-em").textContent = SITE_CONFIG.heroTitleEmphasis;
+  document.querySelector("#story-text").textContent = SITE_CONFIG.story;
+  document.querySelectorAll(".brand-name").forEach(element => { element.textContent = SITE_CONFIG.businessName; });
+  document.querySelectorAll(".brand-tagline").forEach(element => { element.textContent = SITE_CONFIG.tagline; });
+  document.querySelectorAll(".business-name").forEach(element => { element.textContent = SITE_CONFIG.businessName; });
+  document.querySelectorAll(".whatsapp-display").forEach(element => { element.textContent = SITE_CONFIG.whatsappDisplay; });
+  document.querySelectorAll('a[href^="https://wa.me/"]').forEach(link => {
     link.href = `https://wa.me/${SITE_CONFIG.whatsappNumber}`;
   });
   document.querySelector("#mini-cart").addEventListener("click", () => {
@@ -268,7 +280,7 @@ function setupInteractions() {
     updateDateTimeConstraints();
     if (!form.reportValidity()) return;
     const requested = new Date(`${form.elements.date.value}T${form.elements.time.value}`);
-    if (Number.isNaN(requested.getTime()) || requested.getTime() < Date.now() + SITE_CONFIG.orderNoticeHours * 60 * 60 * 1000) {
+    if (Number.isNaN(requested.getTime()) || requested.getTime() < getEarliestDeliveryTime().getTime()) {
       message.textContent = `Please choose a delivery time at least ${SITE_CONFIG.orderNoticeHours} hours from now.`;
       form.elements.time.focus();
       return;
